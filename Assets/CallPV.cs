@@ -8,6 +8,8 @@ using UnityEngine;
 
     public Transform PlayVestedPackage;
     public GameObject summaryObj;
+    public Button iapButton;
+
     private PlayVested script;
     private string userID = "";
 
@@ -48,17 +50,23 @@ using UnityEngine;
         Time.timeScale = 1;
     }
 
+    private void createUserCleanup() {
+        if (this.iapButton) {
+            this.iapButton.interactable = true;
+        }
+        unpauseGame();
+    }
+
     // callback when the user is successfully created
     private void recordUserCB(string userID) {
         Debug.Log("Created user: " + userID);
         this.userID = userID;
-        // GetComponent<Button>().interactable = true;
 
         // show the button to view the summary for the game
         this.summaryObj.SetActive(true);
 
         // call this to finish the cleanup
-        this.unpauseGame();
+        this.createUserCleanup();
     }
 
     public void recordEarningCB(bool success) {
@@ -73,9 +81,10 @@ using UnityEngine;
             this.pauseGame();
             if (this.userID == "") {
                 // disable the IAP button until the callback fires
-                // TODO: this isn't disabling the button properly
-                // GetComponent<Button>().interactable = false;
-                this.script.createUser(recordUserCB, this.unpauseGame);
+                if (this.iapButton) {
+                    this.iapButton.interactable = false;
+                }
+                this.script.createUser(recordUserCB, this.createUserCleanup);
             } else {
                 Debug.Log("Making a donation...");
                 float amount = Random.Range(0.99f, 9.99f);

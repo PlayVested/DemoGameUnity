@@ -40,6 +40,14 @@ using UnityEngine;
         }
     }
 
+    private void pauseGame() {
+        Time.timeScale = 0;
+    }
+
+    private void unpauseGame() {
+        Time.timeScale = 1;
+    }
+
     // callback when the user is successfully created
     private void recordUserCB(string userID) {
         Debug.Log("Created user: " + userID);
@@ -48,23 +56,30 @@ using UnityEngine;
 
         // show the button to view the summary for the game
         this.summaryObj.SetActive(true);
+
+        // call this to finish the cleanup
+        this.unpauseGame();
     }
 
     public void recordEarningCB(bool success) {
         Debug.Log("Your purchase has been added to your PlayVested total for this month!");
+
+        // call this to finish the cleanup
+        this.unpauseGame();
     }
 
     public void handleIAP() {
         if (this.script) {
+            this.pauseGame();
             if (this.userID == "") {
                 // disable the IAP button until the callback fires
                 // TODO: this isn't disabling the button properly
                 // GetComponent<Button>().interactable = false;
-                this.script.createUser(recordUserCB);
+                this.script.createUser(recordUserCB, this.unpauseGame);
             } else {
                 Debug.Log("Making a donation...");
                 float amount = Random.Range(0.99f, 9.99f);
-                this.script.reportEarning(amount, recordEarningCB);
+                this.script.reportEarning(amount, recordEarningCB, this.unpauseGame);
             }
         }
     }

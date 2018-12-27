@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
- using UnityEngine.UI;
+using UnityEngine.UI;
 
  [RequireComponent(typeof(Button))]
  public class CallPV : MonoBehaviour {
@@ -13,6 +13,8 @@ using UnityEngine;
     private PlayVested script;
     private string userID = "";
 
+    const string GAME_ID = "5c00a8b7f9bf974de030b42a"; // This is a the unique ID for the game
+
     // Use this for initialization
     void Start () {
         if (!PlayVestedPackage) {
@@ -23,7 +25,7 @@ using UnityEngine;
         Transform trans = Instantiate(PlayVestedPackage, new Vector3(0, 0, 0), Quaternion.identity);
         this.script = trans.GetComponentInChildren<PlayVested>();
         if (this.script) {
-            this.script.init("5c00a8b7f9bf974de030b42a"); // This is a the unique ID for the game
+            this.script.init(GAME_ID);
         } else {
             Debug.LogError("Error finding script object");
         }
@@ -95,7 +97,9 @@ using UnityEngine;
 
     public void handleSummary() {
         if (this.script) {
-            this.script.showSummary();
+            QueryTotalParams queryParams = new QueryTotalParams(GAME_ID);
+            queryParams.previousWeeks = 1;
+            this.script.showSummary(queryParams);
         }
     }
 }

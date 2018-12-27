@@ -358,6 +358,7 @@ MonoBehaviour:
   PlayVestedPackage: {fileID: 4114301388515940, guid: 72890758fda09ae448e0eea9eb7bc3c4,
     type: 3}
   summaryObj: {fileID: 889442652}
+  iapButton: {fileID: 975954825}
 --- !u!114 &320402188
 MonoBehaviour:
   m_ObjectHideFlags: 0

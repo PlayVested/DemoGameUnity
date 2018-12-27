@@ -1,15 +1,48 @@
-﻿using UnityEngine.Networking;
+﻿using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using UnityEngine;
 
 public delegate void RecordUser(string userID);
 public delegate void RecordEarning(bool success);
+public delegate void TotalResults(QueryTotalResults results);
 public delegate void FailureCleanup();
+
+public class QueryTotalParams {
+    public string userID;
+    public string gameID;
+    public int previousDays;
+    public int previousWeeks;
+    public int previousMonths;
+
+    public QueryTotalParams(string gameID = null, string userID = null) {
+        this.gameID = gameID;
+        this.userID = userID;
+        this.previousDays = 0;
+        this.previousWeeks = 0;
+        this.previousMonths = 0;
+    }
+}
+
+[System.Serializable]
+public class QueryTotalResults {
+    public double lifetime;
+    public double filtered;
+
+    public QueryTotalResults() {
+        lifetime = 0.0;
+        filtered = 0.0;
+    }
+
+    public static QueryTotalResults CreateFromJSON(string jsonString)
+    {
+        return JsonUtility.FromJson<QueryTotalResults>(jsonString);
+    }
+}
 
 public class PlayVested : MonoBehaviour {
     // cached identifiers for the game and user
@@ -29,6 +62,10 @@ public class PlayVested : MonoBehaviour {
     // Input fields used to link with PlayVested account
     public InputField usernameInput;
     public InputField passwordInput;
+
+    // Totals displayed on the summary screen
+    public Text lifetimeInfo;
+    public Text filteredInfo;
 
     //*
     private string baseURL = "localhost:1979";
@@ -143,9 +180,86 @@ public class PlayVested : MonoBehaviour {
         this.createUserObj.SetActive(false);
     }
 
+    private void updateTotalLabel(Text info, double value) {
+        if (info != null && info.transform.parent.gameObject) {
+            if (value > 0.0) {
+                info.transform.parent.gameObject.SetActive(true);
+                info.text = String.Format("{0:C2}", value);
+            } else {
+                info.transform.parent.gameObject.SetActive(false);
+            }
+        } else {
+            Debug.LogWarning("Couldn't find text to update, check that reference in prefab is set correctly");
+        }
+    }
+
+    private IEnumerator queryTotals(QueryTotalParams queryParams, TotalResults resultsCB) {
+        // Clear the displayed info until we get data back from the server
+        this.updateTotalLabel(this.lifetimeInfo, 0);
+        this.updateTotalLabel(this.filteredInfo, 0);
+
+        List<string> queryString = new List<string>();
+        if (queryParams.gameID != null) {
+            queryString.Add("gameID=" + queryParams.gameID);
+        }
+
+        if (queryParams.userID != null) {
+            queryString.Add("userID=" + queryParams.userID);
+        }
+
+        if (queryParams.previousDays != 0) {
+            queryString.Add("previousDays=" + queryParams.previousDays);
+        } else if (queryParams.previousWeeks != 0) {
+            queryString.Add("previousWeeks=" + queryParams.previousWeeks);
+        } else if (queryParams.previousMonths != 0) {
+            queryString.Add("previousMonths=" + queryParams.previousMonths);
+        }
+
+        string url = baseURL + "/records/total";
+        if (queryString.Count > 0) {
+            url += "?";
+            for (int i = 0; i < queryString.Count; i++) {
+                if (i != 0) {
+                    url += '&';
+                }
+                url += queryString[i];
+            }
+        }
+
+        using (UnityWebRequest www = UnityWebRequest.Get(url)) {
+            yield return www.SendWebRequest();
+
+            if (www.isNetworkError || www.isHttpError) {
+                Debug.Log("Error: " + www.error);
+                if (this.failureCB != null) {
+                    this.failureCB();
+                }
+            } else {
+                Debug.Log("Get total complete! Response code: " + www.responseCode);
+
+                while (!(www.isDone && www.downloadHandler.isDone)) {
+                    yield return new WaitForSeconds(0.1f);
+                }
+
+                Debug.Log("Body: " + www.downloadHandler.text);
+                string json = www.downloadHandler.text;
+                QueryTotalResults results = QueryTotalResults.CreateFromJSON(json);
+
+                if (resultsCB != null) {
+                    resultsCB(results);
+                }
+
+                // Update the UI elements
+                this.updateTotalLabel(this.lifetimeInfo, results.lifetime);
+                this.updateTotalLabel(this.filteredInfo, results.filtered);
+            }
+        }
+    }
+
     // Call this to show the UI to view earning details for a game
-    public void showSummary() {
+    public void showSummary(QueryTotalParams queryParams, TotalResults resultsCB = null) {
         if (this.gameID != "") {
+            StartCoroutine(this.queryTotals(queryParams, resultsCB));
             this.summaryObj.SetActive(true);
             return;
         }

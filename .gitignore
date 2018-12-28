@@ -1,4 +1,5 @@
 Library/
 obj/
 Temp/
-Assets/PlayVested/*
+/Assets/PlayVested/
+/Assets/PlayVested/*

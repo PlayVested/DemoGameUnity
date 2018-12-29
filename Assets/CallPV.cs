@@ -66,13 +66,10 @@ using UnityEngine.UI;
 
         // show the button to view the summary for the game
         this.summaryObj.SetActive(true);
-
-        // call this to finish the cleanup
-        this.createPlayerCleanup();
     }
 
-    public void recordEarningCB(float amountRecorded) {
-        Debug.Log("Your purchase of " + amountRecorded + " has been added to your PlayVested total for this month!");
+    public void recordEarningCB(double amountRecorded) {
+        Debug.Log("Your purchase of $" + amountRecorded + " has been added to your PlayVested total for this month!");
     }
 
     public void handleIAP() {
@@ -85,8 +82,8 @@ using UnityEngine.UI;
                 }
                 this.script.createPlayer(this.recordPlayerCB, this.createPlayerCleanup);
             } else {
-                Debug.Log("Making a donation...");
                 float amount = Random.Range(0.99f, 9.99f);
+                Debug.Log("Making a donation of $" + amount);
                 this.script.reportEarning(amount, this.recordEarningCB, this.unpauseGame);
             }
         }

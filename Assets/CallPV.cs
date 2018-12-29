@@ -11,9 +11,9 @@ using UnityEngine.UI;
     public Button iapButton;
 
     private PlayVested script;
-    private string userID = "";
+    private string playerID = "";
 
-    const string GAME_ID = "5c00a8b7f9bf974de030b42a"; // This is a the unique ID for the game
+    const string GAME_ID = "5bfe194f4de8110016de4347"; // This is a the unique ID for the game
 
     // Use this for initialization
     void Start () {
@@ -52,45 +52,42 @@ using UnityEngine.UI;
         Time.timeScale = 1;
     }
 
-    private void createUserCleanup() {
+    private void createPlayerCleanup() {
         if (this.iapButton) {
             this.iapButton.interactable = true;
         }
         unpauseGame();
     }
 
-    // callback when the user is successfully created
-    private void recordUserCB(string userID) {
-        Debug.Log("Created user: " + userID);
-        this.userID = userID;
+    // callback when the player is successfully created
+    private void recordPlayerCB(string playerID) {
+        Debug.Log("Created player: " + playerID);
+        this.playerID = playerID;
 
         // show the button to view the summary for the game
         this.summaryObj.SetActive(true);
 
         // call this to finish the cleanup
-        this.createUserCleanup();
+        this.createPlayerCleanup();
     }
 
-    public void recordEarningCB(bool success) {
-        Debug.Log("Your purchase has been added to your PlayVested total for this month!");
-
-        // call this to finish the cleanup
-        this.unpauseGame();
+    public void recordEarningCB(float amountRecorded) {
+        Debug.Log("Your purchase of " + amountRecorded + " has been added to your PlayVested total for this month!");
     }
 
     public void handleIAP() {
         if (this.script) {
             this.pauseGame();
-            if (this.userID == "") {
+            if (this.playerID == "") {
                 // disable the IAP button until the callback fires
                 if (this.iapButton) {
                     this.iapButton.interactable = false;
                 }
-                this.script.createUser(recordUserCB, this.createUserCleanup);
+                this.script.createPlayer(this.recordPlayerCB, this.createPlayerCleanup);
             } else {
                 Debug.Log("Making a donation...");
                 float amount = Random.Range(0.99f, 9.99f);
-                this.script.reportEarning(amount, recordEarningCB, this.unpauseGame);
+                this.script.reportEarning(amount, this.recordEarningCB, this.unpauseGame);
             }
         }
     }
@@ -99,7 +96,9 @@ using UnityEngine.UI;
         if (this.script) {
             QueryTotalParams queryParams = new QueryTotalParams(GAME_ID);
             queryParams.previousWeeks = 1;
-            this.script.showSummary(queryParams);
+
+            this.pauseGame();
+            this.script.showSummary(queryParams, null, this.unpauseGame);
         }
     }
 }

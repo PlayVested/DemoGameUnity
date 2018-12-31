@@ -13,7 +13,8 @@ using UnityEngine.UI;
     private PlayVested script;
     private string playerID = "";
 
-    const string GAME_ID = "5bfe194f4de8110016de4347"; // This is a the unique ID for the game
+    const string DEV_ID =   "5bfe194f4de8110016de4343"; // This is the unique ID for the developer
+    const string GAME_ID =  "5bfe194f4de8110016de4347"; // This is a the unique ID for the game
 
     // Use this for initialization
     void Start () {
@@ -25,7 +26,7 @@ using UnityEngine.UI;
         Transform trans = Instantiate(PlayVestedPackage, new Vector3(0, 0, 0), Quaternion.identity);
         this.script = trans.GetComponentInChildren<PlayVested>();
         if (this.script) {
-            this.script.init(GAME_ID);
+            this.script.init(DEV_ID, GAME_ID);
         } else {
             Debug.LogError("Error finding script object");
         }
@@ -91,7 +92,7 @@ using UnityEngine.UI;
 
     public void handleSummary() {
         if (this.script) {
-            QueryTotalParams queryParams = new QueryTotalParams(GAME_ID);
+            QueryTotalParams queryParams = new QueryTotalParams(DEV_ID, GAME_ID);
             queryParams.previousWeeks = 1;
 
             this.pauseGame();

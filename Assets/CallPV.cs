@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,9 +13,27 @@ using UnityEngine.UI;
 
     private PlayVested script;
     private string playerID = "";
+    private string devID =  "5bfe194f4de8110016de4343"; // This is the unique ID for the developer
+    private string gameID = "5bfe194f4de8110016de4347"; // This is a the unique ID for the game
+    const string SAVE_FILE = "./Assets/save.txt";
 
-    const string DEV_ID =   "5bfe194f4de8110016de4343"; // This is the unique ID for the developer
-    const string GAME_ID =  "5bfe194f4de8110016de4347"; // This is a the unique ID for the game
+    private void LoadSaveData() {
+        if (File.Exists(SAVE_FILE) && new FileInfo(SAVE_FILE).Length != 0) {
+            StreamReader reader = new StreamReader(SAVE_FILE);
+            this.devID = reader.ReadLine();
+            this.gameID = reader.ReadLine();
+            this.recordPlayerCB(reader.ReadLine());
+            reader.Close();
+        }
+    }
+
+    private void WriteSaveData() {
+        StreamWriter writer = new StreamWriter(SAVE_FILE, false);
+        writer.WriteLine(this.devID);
+        writer.WriteLine(this.gameID);
+        writer.WriteLine(this.playerID);
+        writer.Close();
+    }
 
     // Use this for initialization
     void Start () {
@@ -23,19 +42,22 @@ using UnityEngine.UI;
             return;
         }
 
-        Transform trans = Instantiate(PlayVestedPackage, new Vector3(0, 0, 0), Quaternion.identity);
-        this.script = trans.GetComponentInChildren<PlayVested>();
-        if (this.script) {
-            this.script.init(DEV_ID, GAME_ID);
-        } else {
-            Debug.LogError("Error finding script object");
-        }
-
         // make sure the summary button is hidden until we have a valid player ID
         if (this.summaryObj) {
             this.summaryObj.SetActive(false);
         } else {
             Debug.LogError("Error: set the summary object reference");
+        }
+
+        // try pulling IDs from a file on disk
+        this.LoadSaveData();
+
+        Transform trans = Instantiate(PlayVestedPackage, new Vector3(0, 0, 0), Quaternion.identity);
+        this.script = trans.GetComponentInChildren<PlayVested>();
+        if (this.script) {
+            this.script.init(this.devID, this.gameID, this.playerID);
+        } else {
+            Debug.LogError("Error finding script object");
         }
     }
 
@@ -43,6 +65,7 @@ using UnityEngine.UI;
         if (this.script) {
             this.script.shutdown();
         }
+        this.WriteSaveData();
     }
 
     private void pauseGame() {
@@ -66,7 +89,7 @@ using UnityEngine.UI;
         this.playerID = playerID;
 
         // show the button to view the summary for the game
-        this.summaryObj.SetActive(true);
+        this.summaryObj.SetActive(this.playerID != "");
     }
 
     public void recordEarningCB(double amountRecorded) {
@@ -92,7 +115,7 @@ using UnityEngine.UI;
 
     public void handleSummary() {
         if (this.script) {
-            QueryTotalParams queryParams = new QueryTotalParams(DEV_ID, GAME_ID);
+            QueryTotalParams queryParams = new QueryTotalParams(devID, gameID);
             queryParams.previousWeeks = 1;
 
             this.pauseGame();

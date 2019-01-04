@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -9,6 +10,7 @@ using UnityEngine.UI;
 
     public Transform PlayVestedPackage;
     public GameObject summaryObj;
+    public Text popupMessage;
     public Button iapButton;
 
     private PlayVested script;
@@ -93,7 +95,18 @@ using UnityEngine.UI;
     }
 
     public void recordEarningCB(double amountRecorded) {
-        Debug.Log("Your purchase of $" + amountRecorded + " has been added to your PlayVested total for this month!");
+        string msg = "Your purchase of $" + amountRecorded + " has been added to your PlayVested total for this month!";
+        Debug.Log(msg);
+        if (this.popupMessage) {
+            this.popupMessage.text = msg;
+            this.popupMessage.transform.parent.gameObject.SetActive(true);
+        }
+    }
+
+    public void closePopupMessage() {
+        if (this.popupMessage) {
+            this.popupMessage.transform.parent.gameObject.SetActive(false);
+        }
     }
 
     public void handleIAP() {
@@ -106,7 +119,8 @@ using UnityEngine.UI;
                 }
                 this.script.createPlayer(this.recordPlayerCB, this.createPlayerCleanup);
             } else {
-                float amount = Random.Range(0.99f, 9.99f);
+                float randVal = UnityEngine.Random.Range(0.99f, 9.99f);
+                float amount = (float)Math.Round((double)randVal, 2);
                 Debug.Log("Making a donation of $" + amount);
                 this.script.reportEarning(amount, this.recordEarningCB, this.unpauseGame);
             }

@@ -17,23 +17,37 @@ using UnityEngine.UI;
     private string playerID = "";
     private string devID =  "5bfe194f4de8110016de4343"; // This is the unique ID for the developer
     private string gameID = "5bfe194f4de8110016de4347"; // This is a the unique ID for the game
-    const string SAVE_FILE = "./Assets/save.txt";
+    const string SAVE_DIR = "./Assets";
+    const string SAVE_FILE = SAVE_DIR + "/save.txt";
 
     private void LoadSaveData() {
         if (File.Exists(SAVE_FILE) && new FileInfo(SAVE_FILE).Length != 0) {
             StreamReader reader = new StreamReader(SAVE_FILE);
-            this.devID = reader.ReadLine();
-            this.gameID = reader.ReadLine();
-            this.recordPlayerCB(reader.ReadLine());
+            string line = null;
+            char[] delimiter = {':'};
+            while ((line = reader.ReadLine()) != null) {
+                string[] split = line.Split(delimiter);
+                if (split[0] == "dev") {
+                    this.devID = split[1];
+                } else if (split[0] == "game") {
+                    this.gameID = split[1];
+                } else if (split[0] == "player") {
+                    this.recordPlayerCB(split[1]);
+                }
+            }
             reader.Close();
         }
     }
 
     private void WriteSaveData() {
+        // make sure the output dir exists
+        Directory.CreateDirectory(SAVE_DIR);
+
+        // write the IDs
         StreamWriter writer = new StreamWriter(SAVE_FILE, false);
-        writer.WriteLine(this.devID);
-        writer.WriteLine(this.gameID);
-        writer.WriteLine(this.playerID);
+        writer.WriteLine("dev:" + this.devID);
+        writer.WriteLine("game:" + this.gameID);
+        writer.WriteLine("player:" + this.playerID);
         writer.Close();
     }
 

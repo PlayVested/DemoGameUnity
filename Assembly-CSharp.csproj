@@ -79,7 +79,7 @@
      <Compile Include="Assets\Scripts\ScoreShadow.cs" />
      <Compile Include="Assets\Scripts\SetParticleSortingLayer.cs" />
      <Compile Include="Assets\Scripts\Spawner.cs" />
-     <None Include="Assets\save.txt" />
+     <None Include="Assets\mysave.txt" />
  <Reference Include="Unity.TextMeshPro.Editor">
  <HintPath>C:/Users/erica/Documents/Code/PlayVestedUnity/Demo Game/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
  </Reference>

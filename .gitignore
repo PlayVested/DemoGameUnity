@@ -1,5 +1,5 @@
 Assets/PlayVested/
-Assets/save.txt*
+Assets/*save.txt*
 Build/
 Library/
 obj/

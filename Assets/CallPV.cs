@@ -9,9 +9,11 @@ using UnityEngine.UI;
  public class CallPV : MonoBehaviour {
 
     public Transform PlayVestedPackage;
+    public GameObject storeObj;
     public GameObject summaryObj;
     public Text popupMessage;
     public Button iapButton;
+    public GameObject quitObj;
 
     private PlayVested script;
     private string playerID = "";
@@ -19,6 +21,7 @@ using UnityEngine.UI;
     private string gameID = "5bfe194f4de8110016de4347"; // This is a the unique ID for the game
     const string SAVE_DIR = "./Assets";
     const string SAVE_FILE = SAVE_DIR + "/save.txt";
+    const float DONATION_PCT = 0.1f;
 
     private void LoadSaveData() {
         if (File.Exists(SAVE_FILE) && new FileInfo(SAVE_FILE).Length != 0) {
@@ -39,6 +42,7 @@ using UnityEngine.UI;
         }
     }
 
+    // TODO: wire this up to a save game button
     private void WriteSaveData() {
         // make sure the output dir exists
         Directory.CreateDirectory(SAVE_DIR);
@@ -55,6 +59,16 @@ using UnityEngine.UI;
     void Start () {
         if (!PlayVestedPackage) {
             Debug.LogError("Error: need to set a reference to the PlayVested prefab first");
+            this.OnQuit();
+            return;
+        }
+
+        // make sure the store starts hidden
+        if (this.storeObj) {
+            this.storeObj.SetActive(false);
+        } else {
+            Debug.LogError("Error: need to set a reference to the store object first");
+            this.OnQuit();
             return;
         }
 
@@ -63,6 +77,17 @@ using UnityEngine.UI;
             this.summaryObj.SetActive(false);
         } else {
             Debug.LogError("Error: set the summary object reference");
+            this.OnQuit();
+            return;
+        }
+
+        // make sure the pop up message is hidden
+        if (this.popupMessage) {
+            this.popupMessage.transform.parent.gameObject.SetActive(false);
+        } else {
+            Debug.LogError("Error: set the pop up reference");
+            this.OnQuit();
+            return;
         }
 
         // try pulling IDs from a file on disk
@@ -74,6 +99,12 @@ using UnityEngine.UI;
             this.script.init(this.devID, this.gameID, this.playerID);
         } else {
             Debug.LogError("Error finding script object");
+            this.OnQuit();
+            return;
+        }
+
+        if (!Application.isEditor && this.quitObj) {
+            this.quitObj.SetActive(true);
         }
     }
 
@@ -81,7 +112,11 @@ using UnityEngine.UI;
         if (this.script) {
             this.script.shutdown();
         }
-        this.WriteSaveData();
+        // this.WriteSaveData();
+    }
+
+    public void OnQuit() {
+        Application.Quit();
     }
 
     private void pauseGame() {
@@ -96,7 +131,6 @@ using UnityEngine.UI;
         if (this.iapButton) {
             this.iapButton.interactable = true;
         }
-        unpauseGame();
     }
 
     // callback when the player is successfully created
@@ -105,14 +139,22 @@ using UnityEngine.UI;
         this.playerID = playerID;
 
         // show the button to view the summary for the game
-        this.summaryObj.SetActive(this.playerID != "");
+        this.summaryObj.SetActive(this.script.isValid(this.playerID));
     }
 
     public void recordEarningCB(double amountRecorded) {
-        string msg = "Your purchase of $" + amountRecorded + " has been added to your PlayVested total for this month!";
+        string msg = "Your purchase was successful";
+        int desiredHeight = 60;
+        if (this.script.isValid(this.playerID)) {
+            float donationAmount = (float)Math.Round((double)amountRecorded, 2);
+            msg += "\n\nYou added $" + donationAmount + " to the donation your selected charity will get this month!";
+            desiredHeight += 20;
+        }
+
         Debug.Log(msg);
         if (this.popupMessage) {
             this.popupMessage.text = msg;
+            this.popupMessage.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, desiredHeight);
             this.popupMessage.transform.parent.gameObject.SetActive(true);
         }
     }
@@ -123,31 +165,44 @@ using UnityEngine.UI;
         }
     }
 
-    public void handleIAP() {
-        if (this.script) {
-            this.pauseGame();
-            if (this.playerID == "") {
-                // disable the IAP button until the callback fires
-                if (this.iapButton) {
-                    this.iapButton.interactable = false;
-                }
-                this.script.createPlayer(this.recordPlayerCB, this.createPlayerCleanup);
-            } else {
-                float randVal = UnityEngine.Random.Range(0.99f, 9.99f);
-                float amount = (float)Math.Round((double)randVal, 2);
-                Debug.Log("Making a donation of $" + amount);
-                this.script.reportEarning(amount, this.recordEarningCB, this.unpauseGame);
+    public void handleStoreOpen() {
+        this.pauseGame();
+        if (this.playerID == "") {
+            // disable the IAP button until the callback fires
+            if (this.iapButton) {
+                this.iapButton.interactable = false;
             }
+            this.script.createPlayer(this.recordPlayerCB, this.createPlayerCleanup);
         }
+
+        this.storeObj.SetActive(true);
+    }
+
+    public void handleStoreClose() {
+        this.storeObj.SetActive(false);
+        unpauseGame();
+    }
+
+    public void handleIAP(float amount) {
+        Debug.Log("Making a purchase of $" + amount);
+
+        if (this.script.isValid(this.playerID)) {
+            // if there is a valid PV player, call the web hook
+            float donationAmount = amount * DONATION_PCT;
+            this.script.reportEarning(donationAmount, this.recordEarningCB);
+        } else {
+            // otherwise just report that it was a successful purchase
+            this.recordEarningCB(0);
+        }
+
+        this.handleStoreClose();
     }
 
     public void handleSummary() {
-        if (this.script) {
-            QueryTotalParams queryParams = new QueryTotalParams(devID, gameID);
-            queryParams.previousWeeks = 1;
+        QueryTotalParams queryParams = new QueryTotalParams(devID, gameID);
+        queryParams.previousWeeks = 1;
 
-            this.pauseGame();
-            this.script.showSummary(queryParams, null, this.unpauseGame);
-        }
+        this.pauseGame();
+        this.script.showSummary(queryParams, null, this.unpauseGame);
     }
 }

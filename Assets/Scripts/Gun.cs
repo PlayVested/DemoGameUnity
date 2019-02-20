@@ -21,6 +21,11 @@ public class Gun : MonoBehaviour
 
 	void Update ()
 	{
+		// don't fire while the game is paused
+		if (Time.timeScale == 0) {
+			return;
+		}
+
 		// If the fire button is pressed...
 		if(Input.GetButtonDown("Fire1"))
 		{

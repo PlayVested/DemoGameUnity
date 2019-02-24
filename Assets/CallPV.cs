@@ -11,7 +11,8 @@ using UnityEngine.UI;
     public Transform PlayVestedPackage;
     public GameObject storeObj;
     public GameObject summaryObj;
-    public Text popupMessage;
+    public GameObject popupObj;
+    public GameObject donationBannerObj;
     public Button iapButton;
     public GameObject quitObj;
 
@@ -82,10 +83,19 @@ using UnityEngine.UI;
         }
 
         // make sure the pop up message is hidden
-        if (this.popupMessage) {
-            this.popupMessage.transform.parent.gameObject.SetActive(false);
+        if (this.popupObj) {
+            this.popupObj.SetActive(false);
         } else {
             Debug.LogError("Error: set the pop up reference");
+            this.OnQuit();
+            return;
+        }
+
+        // make sure the banner is hidden
+        if (this.donationBannerObj) {
+            this.donationBannerObj.SetActive(false);
+        } else {
+            Debug.LogError("Error: set the banner reference");
             this.OnQuit();
             return;
         }
@@ -142,26 +152,42 @@ using UnityEngine.UI;
         this.summaryObj.SetActive(this.script.isValid(this.playerID));
     }
 
+    private IEnumerator closeBanner() {
+        // leave the banner up to for a short time
+        float secToWait = 3.0f;
+        yield return new WaitForSeconds(secToWait);
+
+        // then close it
+        if (this.donationBannerObj) {
+            this.donationBannerObj.SetActive(false);
+        }
+    }
+
     public void recordEarningCB(double amountRecorded) {
-        string msg = "Your purchase was successful";
-        int desiredHeight = 60;
         if (this.script.isValid(this.playerID)) {
-            float donationAmount = (float)Math.Round((double)amountRecorded, 2);
-            msg += "\n\nYou added $" + donationAmount + " to the donation your selected charity will get this month!";
-            desiredHeight += 20;
+            if (this.donationBannerObj) {
+                Text msg = this.donationBannerObj.GetComponentInChildren<Text>();
+                if (msg) {
+                    float donationAmount = (float)Math.Round((double)amountRecorded, 2);
+                    msg.text = "You added $" + donationAmount + " to the donation your selected charity will get this month!";
+                    Debug.Log(msg.text);
+                }
+            }
         }
 
-        Debug.Log(msg);
-        if (this.popupMessage) {
-            this.popupMessage.text = msg;
-            this.popupMessage.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, desiredHeight);
-            this.popupMessage.transform.parent.gameObject.SetActive(true);
+        if (this.popupObj) {
+            this.popupObj.SetActive(true);
         }
     }
 
     public void closePopupMessage() {
-        if (this.popupMessage) {
-            this.popupMessage.transform.parent.gameObject.SetActive(false);
+        if (this.popupObj) {
+            this.popupObj.SetActive(false);
+        }
+
+        if (this.donationBannerObj) {
+            this.donationBannerObj.SetActive(true);
+            StartCoroutine(this.closeBanner());
         }
     }
 

@@ -18,6 +18,7 @@ using UnityEngine.UI;
 
     private PlayVested script;
     private string playerID = "";
+    private string charityName = "";
     private string devID =  "5bfe194f4de8110016de4343"; // This is the unique ID for the developer
     private string gameID = "5bfe194f4de8110016de4347"; // This is a the unique ID for the game
     const string SAVE_DIR = "./Assets";
@@ -36,7 +37,7 @@ using UnityEngine.UI;
                 } else if (split[0] == "game") {
                     this.gameID = split[1];
                 } else if (split[0] == "player") {
-                    this.recordPlayerCB(split[1]);
+                    this.recordPlayerCB(split[1], "");
                 }
             }
             reader.Close();
@@ -137,47 +138,50 @@ using UnityEngine.UI;
         Time.timeScale = 1;
     }
 
-    private void createPlayerCleanup() {
-        if (this.iapButton) {
-            this.iapButton.interactable = true;
+    private IEnumerator showBanner(string msgText) {
+        if (!this.donationBannerObj) {
+            yield break;
         }
-    }
 
-    // callback when the player is successfully created
-    private void recordPlayerCB(string playerID) {
-        Debug.Log("Created player: " + playerID);
-        this.playerID = playerID;
+        // update the text on the banner
+        Text msgComponent = this.donationBannerObj.GetComponentInChildren<Text>();
+        if (msgComponent) {
+            msgComponent.text = msgText;
+        }
 
-        // show the button to view the summary for the game
-        this.summaryObj.SetActive(this.script.isValid(this.playerID));
-    }
+        // show the banner
+        this.donationBannerObj.SetActive(true);
 
-    private IEnumerator closeBanner() {
         // leave the banner up to for a short time
         float secToWait = 3.0f;
         yield return new WaitForSeconds(secToWait);
 
         // then close it
-        if (this.donationBannerObj) {
-            this.donationBannerObj.SetActive(false);
+        this.donationBannerObj.SetActive(false);
+    }
+
+    // callback when the player is successfully created
+    private void recordPlayerCB(string playerID, string charityName) {
+        Debug.Log("Created player: " + playerID);
+        this.playerID = playerID;
+
+        // show the button to view the summary for the game if the player is valid
+        this.summaryObj.SetActive(this.script.isValid(this.playerID));
+
+        if (charityName != "") {
+            // show a banner that their selection was made
+            string msgText = "Thank you for supporting " + charityName;
+            this.charityName = charityName;
+            StartCoroutine(this.showBanner(msgText));
         }
     }
 
     public void recordEarningCB(double amountRecorded) {
-        if (this.script.isValid(this.playerID)) {
-            if (this.donationBannerObj) {
-                Text msg = this.donationBannerObj.GetComponentInChildren<Text>();
-                if (msg) {
-                    float donationAmount = (float)Math.Round((double)amountRecorded, 2);
-                    msg.text = "You added $" + donationAmount + " to the donation your selected charity will get this month!";
-                    Debug.Log(msg.text);
-                }
-            }
-        }
-
-        if (this.popupObj) {
-            this.popupObj.SetActive(true);
-        }
+        // show a banner message to remind them they are supporting a charity
+        float donationAmount = (float)Math.Round((double)amountRecorded, 2);
+        string charityName = (this.charityName != "" ? this.charityName : "your selected charity");
+        string msgText = "You added $" + donationAmount + " to the donation " + charityName + " will get this month!";
+        StartCoroutine(this.showBanner(msgText));
     }
 
     public void closePopupMessage() {
@@ -185,28 +189,32 @@ using UnityEngine.UI;
             this.popupObj.SetActive(false);
         }
 
-        if (this.donationBannerObj) {
-            this.donationBannerObj.SetActive(true);
-            StartCoroutine(this.closeBanner());
+        if (this.playerID == "") {
+            this.script.createPlayer(this.recordPlayerCB, this.unpauseGame);
+        } else {
+            this.unpauseGame();
         }
     }
 
     public void handleStoreOpen() {
         this.pauseGame();
-        if (this.playerID == "") {
-            // disable the IAP button until the callback fires
-            if (this.iapButton) {
-                this.iapButton.interactable = false;
-            }
-            this.script.createPlayer(this.recordPlayerCB, this.createPlayerCleanup);
+
+        // disable the IAP button until the store closes
+        if (this.iapButton) {
+            this.iapButton.interactable = false;
         }
 
         this.storeObj.SetActive(true);
     }
 
     public void handleStoreClose() {
+        if (this.iapButton) {
+            this.iapButton.interactable = true;
+        }
+
         this.storeObj.SetActive(false);
-        unpauseGame();
+
+        this.unpauseGame();
     }
 
     public void handleIAP(float amount) {
@@ -216,12 +224,16 @@ using UnityEngine.UI;
             // if there is a valid PV player, call the web hook
             float donationAmount = amount * DONATION_PCT;
             this.script.reportEarning(donationAmount, this.recordEarningCB);
-        } else {
-            // otherwise just report that it was a successful purchase
-            this.recordEarningCB(0);
         }
 
+        // open the pop-up confirmation
+        this.popupObj.SetActive(true);
+
+        // close the store screen
         this.handleStoreClose();
+
+        // keep the game paused while the pop-up is active
+        this.pauseGame();
     }
 
     public void handleSummary() {
@@ -229,6 +241,6 @@ using UnityEngine.UI;
         queryParams.previousWeeks = 1;
 
         this.pauseGame();
-        this.script.showSummary(queryParams, null, this.unpauseGame);
+        this.script.showSummary(queryParams);
     }
 }

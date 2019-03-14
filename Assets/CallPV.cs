@@ -117,6 +117,8 @@ using UnityEngine.UI;
         if (!Application.isEditor && this.quitObj) {
             this.quitObj.SetActive(true);
         }
+
+        this.unpauseGame();
     }
 
     void OnDestroy() {

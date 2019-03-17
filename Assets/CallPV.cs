@@ -37,7 +37,7 @@ using UnityEngine.UI;
                 } else if (split[0] == "game") {
                     this.gameID = split[1];
                 } else if (split[0] == "player") {
-                    this.recordPlayerCB(split[1], "");
+                    this.recordPlayerCB(split[1], "", "");
                 }
             }
             reader.Close();
@@ -163,17 +163,20 @@ using UnityEngine.UI;
     }
 
     // callback when the player is successfully created
-    private void recordPlayerCB(string playerID, string charityName) {
+    private void recordPlayerCB(string playerID, string charityName, string msgText) {
         Debug.Log("Created player: " + playerID);
         this.playerID = playerID;
 
         // show the button to view the summary for the game if the player is valid
         this.summaryObj.SetActive(this.script.isValid(this.playerID));
 
+        // store the name of the charity if it is supplied
         if (charityName != "") {
-            // show a banner that their selection was made
-            string msgText = "Thank you for supporting " + charityName;
             this.charityName = charityName;
+        }
+
+        if (msgText != "") {
+            // show a banner that their selection was made
             StartCoroutine(this.showBanner(msgText));
         }
     }
